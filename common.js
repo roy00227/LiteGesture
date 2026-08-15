@@ -24,6 +24,13 @@ const DEFAULT_GESTURE_BUTTON = "right";
 // ホイールでのタブ移動を上下反転するかどうかの初期値
 const DEFAULT_WHEEL_INVERTED = false;
 
+// ジェスチャーと判定する最小移動距離(px)の初期値
+const DEFAULT_MIN_DISTANCE = 30;
+const MIN_DISTANCE_RANGE = { min: 10, max: 100 };
+
+// 画面にジェスチャーの軌跡・矢印を表示するかどうかの初期値
+const DEFAULT_SHOW_TRAIL = true;
+
 // 設定画面の表示言語
 const DEFAULT_UI_LANGUAGE = "en";
 
@@ -66,6 +73,8 @@ const TRANSLATIONS = {
     dir1Title: "1st direction (Nothing = unset)",
     dir2Title: "2nd direction (Nothing = single-direction gesture)",
     wheelInvertLabel: "Invert wheel tab switching (scroll up = next tab)",
+    minDistanceLabel: "Minimum movement to trigger a gesture (px)",
+    showTrailLabel: "Show gesture trail and direction arrows on screen",
     saveButton: "Save",
     resetButton: "Reset to Default",
     statusSaved: "Saved",
@@ -98,6 +107,8 @@ const TRANSLATIONS = {
     dir1Title: "1本目の方向（なし＝未設定）",
     dir2Title: "2本目の方向（なし＝1方向だけのジェスチャー）",
     wheelInvertLabel: "ホイールでのタブ移動を上下反転する（上回転＝右のタブへ）",
+    minDistanceLabel: "ジェスチャーと判定する最小移動距離（px）",
+    showTrailLabel: "画面にジェスチャーの軌跡と方向の矢印を表示する",
     saveButton: "保存",
     resetButton: "初期設定に戻す",
     statusSaved: "保存しました",

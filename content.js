@@ -5,24 +5,29 @@ let gesture = "";
 let lastDir = "";
 let wheelUsed = false;
 let wheelCooldown = false;
-const MIN_DISTANCE = 30; // ジェスチャーと判定する最小移動距離(px)
 const WHEEL_COOLDOWN_MS = 150; // 連続発火するwheelイベントを1操作1回に間引く間隔
 
 // 設定（chrome.storage.sync）から読み込む値。読み込み完了までは common.js のデフォルトを使う。
 let gestureMap = DEFAULT_GESTURE_MAP;
 let wheelInverted = DEFAULT_WHEEL_INVERTED;
 let gestureButton = DEFAULT_GESTURE_BUTTON; // "right" | "left"
+let minDistance = DEFAULT_MIN_DISTANCE; // ジェスチャーと判定する最小移動距離(px)
+let showTrail = DEFAULT_SHOW_TRAIL;
 
 chrome.storage.sync.get(
   {
     gestureMap: DEFAULT_GESTURE_MAP,
     wheelInverted: DEFAULT_WHEEL_INVERTED,
     gestureButton: DEFAULT_GESTURE_BUTTON,
+    minDistance: DEFAULT_MIN_DISTANCE,
+    showTrail: DEFAULT_SHOW_TRAIL,
   },
   (result) => {
     gestureMap = result.gestureMap;
     wheelInverted = result.wheelInverted;
     gestureButton = result.gestureButton;
+    minDistance = result.minDistance;
+    showTrail = result.showTrail;
   }
 );
 
@@ -31,10 +36,79 @@ chrome.storage.onChanged.addListener((changes, area) => {
   if (changes.gestureMap) gestureMap = changes.gestureMap.newValue;
   if (changes.wheelInverted) wheelInverted = changes.wheelInverted.newValue;
   if (changes.gestureButton) gestureButton = changes.gestureButton.newValue;
+  if (changes.minDistance) minDistance = changes.minDistance.newValue;
+  if (changes.showTrail) showTrail = changes.showTrail.newValue;
 });
 
 function getGestureButtonCode() {
   return gestureButton === "left" ? 0 : 2; // 0 = 左クリック, 2 = 右クリック
+}
+
+// ジェスチャーの軌跡を表示するcanvasオーバーレイ
+let trailCanvas = null;
+let trailCtx = null;
+let trailPoints = [];
+let trailCorners = []; // 方向が認識された地点（矢印記号を表示する）
+
+function ensureTrailCanvas() {
+  if (trailCanvas) return;
+  trailCanvas = document.createElement("canvas");
+  trailCanvas.width = window.innerWidth;
+  trailCanvas.height = window.innerHeight;
+  Object.assign(trailCanvas.style, {
+    position: "fixed",
+    top: "0",
+    left: "0",
+    width: "100vw",
+    height: "100vh",
+    pointerEvents: "none",
+    zIndex: "2147483647",
+  });
+  document.documentElement.appendChild(trailCanvas);
+  trailCtx = trailCanvas.getContext("2d");
+}
+
+function removeTrailCanvas() {
+  if (trailCanvas) {
+    trailCanvas.remove();
+    trailCanvas = null;
+    trailCtx = null;
+  }
+  trailPoints = [];
+  trailCorners = [];
+}
+
+function drawTrail() {
+  if (!trailCtx || trailPoints.length === 0) return;
+
+  trailCtx.clearRect(0, 0, trailCanvas.width, trailCanvas.height);
+
+  trailCtx.lineWidth = 4;
+  trailCtx.strokeStyle = "rgba(42, 99, 199, 0.85)";
+  trailCtx.lineCap = "round";
+  trailCtx.lineJoin = "round";
+  trailCtx.beginPath();
+  trailCtx.moveTo(trailPoints[0].x, trailPoints[0].y);
+  for (let i = 1; i < trailPoints.length; i++) {
+    trailCtx.lineTo(trailPoints[i].x, trailPoints[i].y);
+  }
+  trailCtx.stroke();
+
+  trailCtx.fillStyle = "rgba(42, 99, 199, 0.85)";
+  trailCtx.beginPath();
+  trailCtx.arc(trailPoints[0].x, trailPoints[0].y, 6, 0, Math.PI * 2);
+  trailCtx.fill();
+
+  trailCtx.font = "bold 32px sans-serif";
+  trailCtx.textAlign = "center";
+  trailCtx.textBaseline = "middle";
+  trailCtx.lineWidth = 4;
+  trailCtx.strokeStyle = "rgba(0, 0, 0, 0.55)";
+  trailCtx.fillStyle = "white";
+  for (const corner of trailCorners) {
+    trailCtx.strokeText(corner.symbol, corner.x, corner.y);
+    trailCtx.fillText(corner.symbol, corner.x, corner.y);
+  }
 }
 
 // アクションID → 実際の処理
@@ -60,6 +134,13 @@ window.addEventListener('mousedown', (e) => {
     gesture = "";
     lastDir = "";
     wheelUsed = false;
+
+    if (showTrail) {
+      ensureTrailCanvas();
+      trailPoints = [{ x: e.clientX, y: e.clientY }];
+      trailCorners = [];
+      drawTrail();
+    }
   }
 }, true);
 
@@ -70,6 +151,7 @@ window.addEventListener('wheel', (e) => {
   e.preventDefault();
   wheelUsed = true;
   gesture = ""; // ホイール操作時は通常のジェスチャーを無効化
+  removeTrailCanvas(); // タブ切り替えに切り替わったので軌跡表示は消す
 
   if (wheelCooldown) return; // トラックパッド等の多重発火を間引く
   wheelCooldown = true;
@@ -88,11 +170,14 @@ window.addEventListener('wheel', (e) => {
 // マウス移動：方向の判定（上下左右、複数ストロークを連結）
 window.addEventListener('mousemove', (e) => {
   if (!isGesturing) return;
+  if (wheelUsed) return; // ホイールでタブ移動した後は、離す直前の微小な動きを別ジェスチャーとして拾わない
 
   const dx = e.clientX - startX;
   const dy = e.clientY - startY;
 
-  if (Math.hypot(dx, dy) > MIN_DISTANCE) {
+  if (showTrail) trailPoints.push({ x: e.clientX, y: e.clientY });
+
+  if (Math.hypot(dx, dy) > minDistance) {
     let dir;
     if (Math.abs(dx) > Math.abs(dy)) {
       dir = dx > 0 ? "R" : "L"; // Right / Left
@@ -103,12 +188,15 @@ window.addEventListener('mousemove', (e) => {
     if (dir !== lastDir) {
       gesture += dir;
       lastDir = dir;
+      if (showTrail) trailCorners.push({ x: e.clientX, y: e.clientY, symbol: DIRECTIONS[dir] });
     }
 
     // 次のストロークを判定するため起点をリセット
     startX = e.clientX;
     startY = e.clientY;
   }
+
+  if (showTrail) drawTrail();
 
   // 左クリックの場合、ドラッグによるテキスト選択の開始を防ぐ
   if (gestureButton === "left") {
@@ -121,11 +209,20 @@ window.addEventListener('mouseup', (e) => {
   if (e.button === getGestureButtonCode() && isGesturing) {
     isGesturing = false;
 
-    if (gesture !== "") {
+    if (gesture !== "" && !wheelUsed) {
       executeGesture(gesture);
     }
+    removeTrailCanvas();
   }
 }, true);
+
+// ウィンドウ外でボタンを離す等でmouseupが来なかった場合の保険
+window.addEventListener('blur', () => {
+  if (isGesturing) {
+    isGesturing = false;
+    removeTrailCanvas();
+  }
+});
 
 // 右クリックがジェスチャーボタンの場合：ジェスチャー・ホイール操作後のコンテキストメニューを打ち消す
 window.addEventListener('contextmenu', (e) => {

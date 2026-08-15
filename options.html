@@ -95,6 +95,17 @@
     align-items: center;
     gap: 4px;
   }
+  .number-row {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+  }
+  .number-row input[type="number"] {
+    width: 70px;
+    padding: 4px;
+  }
 </style>
 </head>
 <body>
@@ -124,6 +135,16 @@
   <div class="checkbox-row">
     <input type="checkbox" id="wheel-inverted">
     <label for="wheel-inverted" id="wheel-inverted-label"></label>
+  </div>
+
+  <div class="number-row">
+    <label for="min-distance" id="min-distance-label"></label>
+    <input type="number" id="min-distance">
+  </div>
+
+  <div class="checkbox-row">
+    <input type="checkbox" id="show-trail">
+    <label for="show-trail" id="show-trail-label"></label>
   </div>
 
   <button id="save"></button>

@@ -1,6 +1,10 @@
 const rowsContainer = document.getElementById("gesture-rows");
 const statusEl = document.getElementById("status");
 const wheelInvertedCheckbox = document.getElementById("wheel-inverted");
+const minDistanceInput = document.getElementById("min-distance");
+minDistanceInput.min = MIN_DISTANCE_RANGE.min;
+minDistanceInput.max = MIN_DISTANCE_RANGE.max;
+const showTrailCheckbox = document.getElementById("show-trail");
 const gestureButtonRow = document.getElementById("gesture-button-row");
 const langSwitch = document.getElementById("lang-switch");
 
@@ -59,6 +63,8 @@ function applyStaticTexts() {
   document.getElementById("th-dir1").textContent = tr.tableHeaders.dir1;
   document.getElementById("th-dir2").textContent = tr.tableHeaders.dir2;
   document.getElementById("wheel-inverted-label").textContent = tr.wheelInvertLabel;
+  document.getElementById("min-distance-label").textContent = tr.minDistanceLabel;
+  document.getElementById("show-trail-label").textContent = tr.showTrailLabel;
   document.getElementById("save").textContent = tr.saveButton;
   document.getElementById("reset").textContent = tr.resetButton;
   updateLangSwitchUI();
@@ -202,6 +208,8 @@ function loadSettings() {
       wheelInverted: DEFAULT_WHEEL_INVERTED,
       gestureButton: DEFAULT_GESTURE_BUTTON,
       uiLanguage: DEFAULT_UI_LANGUAGE,
+      minDistance: DEFAULT_MIN_DISTANCE,
+      showTrail: DEFAULT_SHOW_TRAIL,
     },
     (result) => {
       currentLang = result.uiLanguage;
@@ -210,6 +218,8 @@ function loadSettings() {
       buildRows(currentGestureMap);
       buildGestureButtonRow(result.gestureButton);
       wheelInvertedCheckbox.checked = result.wheelInverted;
+      minDistanceInput.value = result.minDistance;
+      showTrailCheckbox.checked = result.showTrail;
     }
   );
 }
@@ -249,12 +259,19 @@ document.getElementById("save").addEventListener("click", () => {
   }
   currentGestureMap = newGestureMap;
 
+  let minDistance = parseInt(minDistanceInput.value, 10);
+  if (Number.isNaN(minDistance)) minDistance = DEFAULT_MIN_DISTANCE;
+  minDistance = Math.min(MIN_DISTANCE_RANGE.max, Math.max(MIN_DISTANCE_RANGE.min, minDistance));
+  minDistanceInput.value = minDistance;
+
   chrome.storage.sync.set(
     {
       gestureMap: newGestureMap,
       wheelInverted: wheelInvertedCheckbox.checked,
       gestureButton: getSelectedGestureButton(),
       uiLanguage: currentLang,
+      minDistance,
+      showTrail: showTrailCheckbox.checked,
     },
     () => {
       showStatus(t().statusSaved);
@@ -268,12 +285,16 @@ document.getElementById("reset").addEventListener("click", () => {
       gestureMap: DEFAULT_GESTURE_MAP,
       wheelInverted: DEFAULT_WHEEL_INVERTED,
       gestureButton: DEFAULT_GESTURE_BUTTON,
+      minDistance: DEFAULT_MIN_DISTANCE,
+      showTrail: DEFAULT_SHOW_TRAIL,
     },
     () => {
       currentGestureMap = DEFAULT_GESTURE_MAP;
       buildRows(currentGestureMap);
       wheelInvertedCheckbox.checked = DEFAULT_WHEEL_INVERTED;
       buildGestureButtonRow(DEFAULT_GESTURE_BUTTON);
+      minDistanceInput.value = DEFAULT_MIN_DISTANCE;
+      showTrailCheckbox.checked = DEFAULT_SHOW_TRAIL;
       showStatus(t().statusReset);
     }
   );
