@@ -29,8 +29,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       // 右のタブへ移動
       shiftTab(windowId, 1);
       break;
+
+    case "GESTURE_START":
+      // このウィンドウでジェスチャーが開始したことを記録する。
+      // ホイールでアクティブタブが切り替わっても継続してタブ移動できるよう、
+      // 新しくアクティブになったタブへ状態を同期するために使う。
+      if (windowId) gestureWindows.set(windowId, new Set(tabId != null ? [tabId] : []));
+      break;
+
+    case "GESTURE_END":
+      if (windowId) {
+        const notifiedTabIds = gestureWindows.get(windowId);
+        gestureWindows.delete(windowId);
+        if (notifiedTabIds) {
+          for (const id of notifiedTabIds) {
+            if (id === tabId) continue; // 送信元は既に自分でジェスチャー終了済み
+            chrome.tabs.sendMessage(id, { action: "SYNC_GESTURE_STATE", active: false }).catch(() => {});
+          }
+        }
+      }
+      break;
   }
 });
+
+// ホイールによる連続タブ移動中にジェスチャー状態を同期したタブID
+// （ジェスチャー終了時に状態をリセットするため windowId ごとに記憶する）
+const gestureWindows = new Map(); // windowId -> Set<tabId>
 
 // 直近でアクティブにしたタブIDをウィンドウごとに記憶する。
 // chrome.tabs.query の active フラグは chrome.tabs.update 直後だと
@@ -79,4 +103,12 @@ async function doShiftTab(windowId, direction) {
   // 反映待ちせず即座に基準を更新しておく（次の呼び出しがこの値を参照する）
   lastActiveTabId.set(windowId, targetTab.id);
   await chrome.tabs.update(targetTab.id, { active: true });
+
+  // ジェスチャー継続中なら、新しくアクティブになったタブ（別インスタンスの
+  // コンテンツスクリプト）へも状態を同期し、ホイールでの連続移動を継続できるようにする
+  const notifiedTabIds = gestureWindows.get(windowId);
+  if (notifiedTabIds) {
+    notifiedTabIds.add(targetTab.id);
+    chrome.tabs.sendMessage(targetTab.id, { action: "SYNC_GESTURE_STATE", active: true }).catch(() => {});
+  }
 }

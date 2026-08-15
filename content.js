@@ -134,6 +134,8 @@ window.addEventListener('mousedown', (e) => {
     gesture = "";
     lastDir = "";
     wheelUsed = false;
+    // バックグラウンドへ通知：ホイールでタブが切り替わった場合に備える
+    chrome.runtime.sendMessage({ action: "GESTURE_START" });
 
     if (showTrail) {
       ensureTrailCanvas();
@@ -143,6 +145,19 @@ window.addEventListener('mousedown', (e) => {
     }
   }
 }, true);
+
+// タブ移動でアクティブタブが切り替わると、mousedownを検知していない
+// 新しいタブのコンテンツスクリプト（別インスタンス）にはisGesturing等の
+// 状態が引き継がれず、連続でホイールを回してもタブが1回しか進まなかった。
+// バックグラウンド経由で新しいアクティブタブへ状態を同期してもらう。
+chrome.runtime.onMessage.addListener((message) => {
+  if (message.action === "SYNC_GESTURE_STATE") {
+    isGesturing = message.active;
+    wheelUsed = message.active; // ホイールでの継続移動中は通常ジェスチャーを無効化
+    gesture = "";
+    lastDir = "";
+  }
+});
 
 // ジェスチャーボタン押下中のホイール回転：連続でタブを左右移動
 window.addEventListener('wheel', (e) => {
@@ -208,6 +223,7 @@ window.addEventListener('mousemove', (e) => {
 window.addEventListener('mouseup', (e) => {
   if (e.button === getGestureButtonCode() && isGesturing) {
     isGesturing = false;
+    chrome.runtime.sendMessage({ action: "GESTURE_END" });
 
     if (gesture !== "" && !wheelUsed) {
       executeGesture(gesture);
@@ -217,9 +233,12 @@ window.addEventListener('mouseup', (e) => {
 }, true);
 
 // ウィンドウ外でボタンを離す等でmouseupが来なかった場合の保険
+// ※ ホイールでのタブ切り替え中（wheelUsed=true）は、自分自身のタブ切り替えでも
+//   blurが発生してしまうため、ここでジェスチャーを終了させてはいけない
 window.addEventListener('blur', () => {
-  if (isGesturing) {
+  if (isGesturing && !wheelUsed) {
     isGesturing = false;
+    chrome.runtime.sendMessage({ action: "GESTURE_END" });
     removeTrailCanvas();
   }
 });
