@@ -8,15 +8,17 @@
     </td>
   </tr>
   <tr>
-    <td valign="top">
-      Customizable mouse gestures for tabs & navigation: close, reload, duplicate, switch tabs, go back/forward, and more.
-      <br><br>
-      <img src="./images/en.png" alt="Options Screenshot (English)">
+    <td valign="top" align="center">
+      <p align="left">
+        Customizable mouse gestures for tabs & navigation: close, reload, duplicate, switch tabs, go back/forward, and more.
+      </p>
+      <img src="./images/en.png" alt="Options Screenshot (English)" height="850" style="object-fit: contain;">
     </td>
-    <td valign="top">
-      右クリック＋マウスの動きで、戻る・進む・タブを閉じる・複製・切替などを実行。すべて自分好みに割り当て変更できます。
-      <br><br>
-      <img src="./images/jp.png" alt="オプション画面のスクリーンショット（日本語）">
+    <td valign="top" align="center">
+      <p align="left">
+        右クリック＋マウスの動きで、戻る・進む・タブを閉じる・複製・切替などを実行。すべて自分好みに割り当て変更できます。
+      </p>
+      <img src="./images/jp.png" alt="オプション画面のスクリーンショット（日本語）" height="850" style="object-fit: contain;">
     </td>
   </tr>
 </table>
