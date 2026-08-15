@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Mouse Gesture Settings</title>
+<style>
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 480px;
+    margin: 24px auto;
+    color: #222;
+  }
+  .top-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  h1 {
+    font-size: 18px;
+    margin: 0;
+  }
+  .lang-switch {
+    display: flex;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    overflow: hidden;
+  }
+  .lang-switch button {
+    margin: 0;
+    padding: 6px 12px;
+    border: none;
+    background: #f4f4f4;
+    cursor: pointer;
+    font-size: 13px;
+  }
+  .lang-switch button + button {
+    border-left: 1px solid #ccc;
+  }
+  .lang-switch button.active {
+    background: #2a63c7;
+    color: #fff;
+    font-weight: bold;
+  }
+  p.note {
+    color: #666;
+    font-size: 13px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 12px;
+  }
+  th, td {
+    text-align: left;
+    padding: 8px 6px;
+    border-bottom: 1px solid #e0e0e0;
+  }
+  select {
+    width: 100%;
+    padding: 4px;
+  }
+  select.conflict {
+    border: 1px solid #b3261e;
+    background: #fdecea;
+  }
+  #status {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #2a7a2a;
+    height: 1em;
+  }
+  button {
+    margin-top: 16px;
+    padding: 8px 16px;
+    cursor: pointer;
+  }
+  .checkbox-row {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .checkbox-row label {
+    font-size: 14px;
+  }
+  .radio-row {
+    margin-top: 16px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 14px;
+  }
+  .radio-row label {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+</style>
+</head>
+<body>
+  <div class="top-row">
+    <h1 id="page-title">Mouse Gesture Settings</h1>
+    <div class="lang-switch" id="lang-switch">
+      <button type="button" data-lang="en">English</button>
+      <button type="button" data-lang="ja">日本語</button>
+    </div>
+  </div>
+
+  <p class="note" id="page-note"></p>
+
+  <div class="radio-row" id="gesture-button-row"></div>
+
+  <table>
+    <thead>
+      <tr>
+        <th id="th-action"></th>
+        <th id="th-dir1"></th>
+        <th id="th-dir2"></th>
+      </tr>
+    </thead>
+    <tbody id="gesture-rows"></tbody>
+  </table>
+
+  <div class="checkbox-row">
+    <input type="checkbox" id="wheel-inverted">
+    <label for="wheel-inverted" id="wheel-inverted-label"></label>
+  </div>
+
+  <button id="save"></button>
+  <button id="reset"></button>
+  <div id="status"></div>
+
+  <script src="common.js"></script>
+  <script src="options.js"></script>
+</body>
+</html>
