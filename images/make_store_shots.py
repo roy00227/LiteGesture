@@ -1,21 +1,20 @@
 from PIL import Image, ImageDraw, ImageFilter
 
-PAD = 16          # inner padding between card border and content
-RADIUS = 14        # card corner radius
-BORDER_COLOR = (221, 221, 221, 255)
-BORDER_WIDTH = 1
-GAP = 56           # space between the two cards (divider line sits in the middle)
-SHADOW_MARGIN = 24
-SHADOW_BLUR = 8
-SHADOW_OFFSET_Y = 6
+PAD = 10           # inner padding between card border and content
+RADIUS = 14         # card corner radius
+SHADOW_MARGIN = 14
+SHADOW_BLUR = 6
+SHADOW_OFFSET_Y = 4
 SHADOW_ALPHA = 70
 TARGET_W, TARGET_H = 1280, 800
+OUTER_MARGIN = 24   # whitespace left around the enlarged card on the final canvas
 
 
-def make_card(content: Image.Image, card_h: int) -> Image.Image:
+def make_card(content: Image.Image) -> Image.Image:
     content = content.convert("RGBA")
     w, h = content.size
     card_w = w + 2 * PAD
+    card_h = h + 2 * PAD
     card = Image.new("RGBA", (card_w, card_h), (0, 0, 0, 0))
     draw = ImageDraw.Draw(card)
     draw.rounded_rectangle(
@@ -23,8 +22,7 @@ def make_card(content: Image.Image, card_h: int) -> Image.Image:
         radius=RADIUS,
         fill=(255, 255, 255, 255),
     )
-    y_off = PAD + (card_h - 2 * PAD - h) // 2
-    card.paste(content, (PAD, y_off), content)
+    card.paste(content, (PAD, PAD), content)
     return card
 
 
@@ -44,33 +42,26 @@ def add_shadow(card: Image.Image) -> Image.Image:
 
 
 for lang in ["en", "jp"]:
-    top = Image.open(f"images/{lang}-part-top.png")
-    bottom = Image.open(f"images/{lang}-part-bottom.png")
-    card_h = max(top.size[1], bottom.size[1]) + 2 * PAD
+    for part in ["top", "bottom"]:
+        content = Image.open(f"images/{lang}-part-{part}.png")
+        card = add_shadow(make_card(content))
 
-    left_card = add_shadow(make_card(top, card_h))
-    right_card = add_shadow(make_card(bottom, card_h))
+        # flatten onto white
+        flat = Image.new("RGB", card.size, "white")
+        flat.paste(card, (0, 0), card)
 
-    lw, lh = left_card.size
-    rw, rh = right_card.size
+        # Scale the single card up as much as possible (no distortion) so it
+        # fills the store canvas, leaving only a thin, even margin.
+        avail_w = TARGET_W - 2 * OUTER_MARGIN
+        avail_h = TARGET_H - 2 * OUTER_MARGIN
+        scale = min(avail_w / flat.size[0], avail_h / flat.size[1])
+        scaled_w = round(flat.size[0] * scale)
+        scaled_h = round(flat.size[1] * scale)
+        scaled = flat.resize((scaled_w, scaled_h), Image.LANCZOS)
 
-    content_w = lw + GAP + rw
-    content_h = max(lh, rh)
-
-    composite = Image.new("RGBA", (content_w, content_h), (0, 0, 0, 0))
-    composite.paste(left_card, (0, 0), left_card)
-    composite.paste(right_card, (lw + GAP, 0), right_card)
-
-    # flatten onto white
-    flat = Image.new("RGB", composite.size, "white")
-    flat.paste(composite, (0, 0), composite)
-    flat.save(f"images/{lang}-store.png")
-
-    # No scaling: keep native resolution (crisp, no resample blur) and just
-    # pad with whitespace on every side to reach the exact store size.
-    canvas = Image.new("RGB", (TARGET_W, TARGET_H), "white")
-    x_off = (TARGET_W - flat.size[0]) // 2
-    y_off = (TARGET_H - flat.size[1]) // 2
-    canvas.paste(flat, (max(x_off, 0), max(y_off, 0)))
-    canvas.save(f"images/{lang}-store-1280x800.png")
-    print(lang, "composite", flat.size, "-> final", canvas.size)
+        canvas = Image.new("RGB", (TARGET_W, TARGET_H), "white")
+        x_off = (TARGET_W - scaled_w) // 2
+        y_off = (TARGET_H - scaled_h) // 2
+        canvas.paste(scaled, (max(x_off, 0), max(y_off, 0)))
+        canvas.save(f"images/{lang}-{part}-1280x800.png")
+        print(lang, part, "card", flat.size, "-> scaled", scaled.size, "-> final", canvas.size)
